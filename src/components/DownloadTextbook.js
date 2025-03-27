@@ -1,5 +1,4 @@
 import React from "react";
-import { initiatePayment } from "../services/apiService";
 
 const DownloadTextbook = ({ textbook }) => {
   const handleDownload = () => {
