@@ -146,11 +146,18 @@ const TextbookMarketplace = () => {
 
       {textbooks.length > 0 ? (
         textbooks.map((book) => <DownloadTextbook key={book._id} textbook={book} />)
-      ) : (
-        syllabusScheme && college && department && semester && subject && <UploadTextbook />
+      ) : (syllabusScheme && college && department && semester && subject && 
+        <UploadTextbook 
+          syllabusScheme={syllabusScheme}
+          college={college}
+          department={department}
+          semester={semester}
+          subject={subject}
+        />
       )}
     </div>
   );
 };
 
 export default TextbookMarketplace;
+
