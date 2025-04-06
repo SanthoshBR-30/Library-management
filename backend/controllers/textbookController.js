@@ -1,93 +1,63 @@
-// const Grid = require("gridfs-stream");
-// const mongoose = require("mongoose");
-
-// const conn = mongoose.connection;
-// let gfs;
-
-// conn.once("open", () => {
-//   gfs = Grid(conn.db, mongoose.mongo);
-//   gfs.collection("uploads");
-// });
-
-// exports.uploadTextbook = async (req, res) => {
-//   try {
-//     // Make sure file and metadata are available
-//     if (!req.file) {
-//       return res.status(400).json({ error: "No file uploaded" });
-//     }
-    
-//     // Add the metadata to the file
-//     if (req.body.semester && req.body.subject) {
-//       const fileId = req.file.id;
-//       await gfs.files.updateOne(
-//         { _id: fileId },
-//         { $set: { 
-//           metadata: {
-//             semester: req.body.semester,
-//             subject: req.body.subject,
-//             college: req.body.college,
-//             department: req.body.department,
-//             syllabusScheme: req.body.syllabusScheme
-//           }
-//         }}
-//       );
-//     }
-    
-//     res.json({ file: req.file });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Server error during upload" });
-//   }
-// };
-
-// exports.getTextbooks = async (req, res) => {
-//   const { semester, subject } = req.query;
-//   const files = await gfs.files.find({ "metadata.semester": semester, "metadata.subject": subject }).toArray();
-//   res.json(files);
-// };
 
 
-const mongoose = require("mongoose");
-const Grid = require("gridfs-stream");
-const Textbook = require("../models/textbookModel"); // Import Textbook model
+const Textbook = require("../models/textbookModel");
 
-const conn = mongoose.createConnection(process.env.MONGO_URI || "mongodb://localhost:27017/textbookDB", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-let gfs;
-conn.once("open", () => {
-  gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection("uploads");
-  console.log("✅ GridFS Initialized...");
-});
-
-// 📌 Upload textbook and save metadata
 exports.uploadTextbook = async (req, res) => {
   try {
-    console.log("📝 Upload Request Received");
-    
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded!" });
+      return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // Save metadata in `Textbook` collection
+    // Extract metadata from request body
+    const { syllabusScheme, college, department, semester, subject } = req.body;
+    
+    // Create a new textbook record
     const textbook = new Textbook({
       filename: req.file.filename,
-      semester: req.body.semester,
-      subject: req.body.subject,
-      college: req.body.college,
-      department: req.body.department,
-      syllabusScheme: req.body.syllabusScheme,
-      price: req.body.price || 0, // If selling textbooks
+      fileId: req.file.id, // multer-gridfs-storage uses 'id'
+      contentType: req.file.contentType || req.file.mimetype,
+      syllabusScheme,
+      college,
+      department,
+      semester,
+      subject
     });
-
-    await textbook.save(); // Save metadata in MongoDB
     
-    res.status(201).json({ message: "✅ PDF uploaded successfully", file: req.file });
+    await textbook.save();
+    
+    res.status(201).json({ 
+      message: "Textbook uploaded successfully",
+      textbook
+    });
   } catch (error) {
-    console.error("❌ Error uploading PDF:", error);
-    res.status(500).json({ message: "Error uploading PDF", error });
+    console.error("Upload error:", error);
+    res.status(500).json({ error: error.message || "Server error during upload" });
   }
 };
+
+
+
+exports.getTextbooks = async (req, res) => {
+  try {
+    const { syllabusScheme, college, department, semester, subject } = req.query;
+    
+    // Build query object with only defined parameters
+    const query = {};
+    if (syllabusScheme) query.syllabusScheme = syllabusScheme;
+    if (college) query.college = college;
+    if (department) query.department = department;
+    if (semester) query.semester = semester;
+    if (subject) query.subject = subject;
+    
+    console.log("Searching textbooks with query:", query);
+    
+    const textbooks = await Textbook.find(query);
+    console.log(`Found ${textbooks.length} textbooks`);
+    
+    res.json(textbooks);
+  } catch (error) {
+    console.error("Error fetching textbooks:", error);
+    res.status(500).json({ error: error.message || "Server error" });
+  }
+};
+

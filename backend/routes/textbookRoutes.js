@@ -1,98 +1,87 @@
 // const express = require("express");
 // const router = express.Router();
 // const multer = require("multer");
-// const { GridFsStorage } = require("multer-gridfs-storage");
+// // const { GridFsStorage } = require("multer-gridfs-storage");
+// const  GridFsStorage  = require("multer-gridfs-storage");
 // const textbookController = require("../controllers/textbookController");
 
 // // Create storage engine
 // const storage = new GridFsStorage({
 //   url: process.env.MONGO_URI || "mongodb://localhost:27017/textbookDB",
 //   options: { useNewUrlParser: true, useUnifiedTopology: true },
-//   file: (req, file) => {
-//     return {
-//       filename: file.originalname,
-//       bucketName: "uploads",
-//       metadata: {
-//         semester: req.body.semester,
-//         subject: req.body.subject,
-//         college: req.body.college,
-//         department: req.body.department,
-//         syllabusScheme: req.body.syllabusScheme
-//       }
-//     };
+//   // file: (req, file) => {
+//   //   return {
+//   //     filename: Date.now() + '-' +file.originalname,
+//   //     bucketName: "uploads",
+//   //     metadata: {
+//   //       semester: req.body.semester,
+//   //       subject: req.body.subject,
+//   //       college: req.body.college,
+//   //       department: req.body.department,
+//   //       syllabusScheme: req.body.syllabusScheme
+//   //     }
+//   //   };
+//   // }
+//   file: async (req, file) => {
+//     try {
+//       console.log("Inside file():", file.originalname);
+//       return {
+//         filename: Date.now() + '-' + file.originalname,
+//         bucketName: "uploads",
+//         metadata: {
+//           semester: req.body.semester,
+//           subject: req.body.subject,
+//           college: req.body.college,
+//           department: req.body.department,
+//           syllabusScheme: req.body.syllabusScheme
+//         }
+//       };
+//     } catch (err) {
+//       console.error("Error in file():", err);
+//       throw err;
+//     }
 //   }
+  
 // });
 
 // const upload = multer({ storage });
 
 // router.post("/upload", upload.single("textbook"), textbookController.uploadTextbook);
+
 // router.get("/", textbookController.getTextbooks);
 
 // module.exports = router;
 
-
 const express = require("express");
-const mongoose = require("mongoose");
 const multer = require("multer");
 const { GridFsStorage } = require("multer-gridfs-storage");
-const Grid = require("gridfs-stream");
-const dotenv = require("dotenv");
 const textbookController = require("../controllers/textbookController");
-
-dotenv.config();
+const { getNativeDb } = require("../config/db");
 
 const router = express.Router();
 
-// MongoDB connection URI
-const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/textbookDB";
-
-// Create connection
-const conn = mongoose.createConnection(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-// Initialize GridFS
-let gfs;
-conn.once("open", () => {
-  gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection("uploads");
-});
-
-// Storage engine for GridFS
+// Create storage engine
 const storage = new GridFsStorage({
-  url: mongoURI,
+  db: getNativeDb(),
   file: (req, file) => {
-    return new Promise((resolve, reject) => {
-      if (file.mimetype !== "application/pdf") {
-        return reject(new Error("Only PDF files are allowed"));
+    return {
+      filename: Date.now() + '-' + file.originalname,
+      bucketName: "uploads",
+      metadata: {
+        semester: req.body.semester,
+        subject: req.body.subject,
+        college: req.body.college,
+        department: req.body.department,
+        syllabusScheme: req.body.syllabusScheme
       }
-      const filename = `${Date.now()}-${file.originalname}`;
-      const fileInfo = {
-        filename: filename,
-        bucketName: "uploads",
-        metadata: {
-          semester: req.body.semester,
-          subject: req.body.subject,
-          college: req.body.college,
-          department: req.body.department,
-          syllabusScheme: req.body.syllabusScheme,
-        },
-      };
-      resolve(fileInfo);
-    });
-  },
+    };
+  }
 });
 
 const upload = multer({ storage });
 
-// Upload route
+// Routes
 router.post("/upload", upload.single("textbook"), textbookController.uploadTextbook);
-
-// // Get all textbooks
-// router.get("/", textbookController.getTextbooks);
-
-// // Retrieve a file by filename
-// router.get("/file/:filename", textbookController.getTextbookFile);
+router.get("/", textbookController.getTextbooks);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-const { initiatePaytmPayment } = require("../utils/paytm");
+//const { initiatePaytmPayment } = require("../utils/paytm");
 
 exports.startPayment = async (req, res) => {
   const { textbookId } = req.body;
