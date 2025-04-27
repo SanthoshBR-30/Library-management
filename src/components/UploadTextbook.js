@@ -20,7 +20,8 @@ const UploadTextbook = ({ syllabusScheme, college, department, semester, subject
       
       alert("Upload successful!");
       setFile(null);
-      // Optionally trigger a refresh of the parent component
+            
+
     } catch (err) {
       setError("Upload failed: " + (err.message || "Unknown error"));
       console.error("Upload error:", err);
@@ -44,7 +45,7 @@ const UploadTextbook = ({ syllabusScheme, college, department, semester, subject
         />
         <label htmlFor="textbook-file">
           {file ? file.name : "Choose file"}
-        </label>
+        </label>c
       </div>
       
       {error && <div className="error-message">{error}</div>}

@@ -21,7 +21,7 @@
 
 const { MongoClient } = require("mongodb");
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
+const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = "textbookDB";
 
 let dbInstance;

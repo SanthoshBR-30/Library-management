@@ -1,87 +1,87 @@
-// const express = require("express");
-// const router = express.Router();
-// const multer = require("multer");
-// // const { GridFsStorage } = require("multer-gridfs-storage");
-// const  GridFsStorage  = require("multer-gridfs-storage");
-// const textbookController = require("../controllers/textbookController");
-
-// // Create storage engine
-// const storage = new GridFsStorage({
-//   url: process.env.MONGO_URI || "mongodb://localhost:27017/textbookDB",
-//   options: { useNewUrlParser: true, useUnifiedTopology: true },
-//   // file: (req, file) => {
-//   //   return {
-//   //     filename: Date.now() + '-' +file.originalname,
-//   //     bucketName: "uploads",
-//   //     metadata: {
-//   //       semester: req.body.semester,
-//   //       subject: req.body.subject,
-//   //       college: req.body.college,
-//   //       department: req.body.department,
-//   //       syllabusScheme: req.body.syllabusScheme
-//   //     }
-//   //   };
-//   // }
-//   file: async (req, file) => {
-//     try {
-//       console.log("Inside file():", file.originalname);
-//       return {
-//         filename: Date.now() + '-' + file.originalname,
-//         bucketName: "uploads",
-//         metadata: {
-//           semester: req.body.semester,
-//           subject: req.body.subject,
-//           college: req.body.college,
-//           department: req.body.department,
-//           syllabusScheme: req.body.syllabusScheme
-//         }
-//       };
-//     } catch (err) {
-//       console.error("Error in file():", err);
-//       throw err;
-//     }
-//   }
-  
-// });
-
-// const upload = multer({ storage });
-
-// router.post("/upload", upload.single("textbook"), textbookController.uploadTextbook);
-
-// router.get("/", textbookController.getTextbooks);
-
-// module.exports = router;
-
 const express = require("express");
-const multer = require("multer");
-const { GridFsStorage } = require("multer-gridfs-storage");
-const textbookController = require("../controllers/textbookController");
-const { getNativeDb } = require("../config/db");
+const mongoose = require("mongoose");
+const Grid = require("gridfs-stream");
+const dotenv = require("dotenv");
+const Textbook = require("../models/textbookModel");
 
 const router = express.Router();
+dotenv.config();
 
-// Create storage engine
-const storage = new GridFsStorage({
-  db: getNativeDb(),
-  file: (req, file) => {
-    return {
-      filename: Date.now() + '-' + file.originalname,
-      bucketName: "uploads",
-      metadata: {
-        semester: req.body.semester,
-        subject: req.body.subject,
-        college: req.body.college,
-        department: req.body.department,
-        syllabusScheme: req.body.syllabusScheme
-      }
-    };
-  }
+let gfs;
+const db = mongoose.connection;
+
+db.once("open", () => {
+  gfs = Grid(db.db, mongoose.mongo);
+  gfs.collection("uploads");
+  console.log("✅ GridFS initialized in textbookRoutes.js");
 });
 
-const upload = multer({ storage });
+module.exports = (upload) => {
+  // GET /api/textbooks
 
-// Routes
-router.post("/upload", upload.single("textbook"), textbookController.uploadTextbook);
-router.get("/", textbookController.getTextbooks);
 
-module.exports = router;
+  router.post("/upload", upload.single("textbook"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const textbook = new Textbook({
+        filename: req.file.filename,
+        fileId: req.file.id,
+        contentType: req.file.contentType,
+        syllabusScheme: req.body.syllabusScheme,
+        college: req.body.college,
+        department: req.body.department,
+        semester: req.body.semester,
+        subject: req.body.subject,
+      });
+
+      await textbook.save();
+
+      res.status(200).json({
+        message: "File uploaded successfully",
+        file,
+      });
+    } catch (err) {
+      console.error("Upload error:", err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+  
+  router.get("/", async (req, res) => {
+    try {
+      const textbooks = await Textbook.find(); // or add query filters
+      res.status(200).json(textbooks);
+    } catch (err) {
+      console.error("Fetching textbooks failed:", err);
+      res.status(500).json({ error: "Failed to fetch textbooks" });
+    }
+  });
+
+  router.get("/download/:filename", async (req, res) => {
+    try {
+      if (!gfs) {
+        return res.status(500).send("GridFS not initialized");
+      }
+
+      const file = await gfs.files.findOne({ filename: req.params.filename });
+
+      if (!file) {
+        return res.status(404).send("File not found");
+      }
+
+      const readStream = gfs.createReadStream(file.filename);
+
+      res.setHeader("Content-Type", file.contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+
+      readStream.pipe(res);
+    } catch (error) {
+      console.error("Download error:", error);
+      res.status(500).send("Error downloading file");
+    }
+  });
+
+  return router;
+};

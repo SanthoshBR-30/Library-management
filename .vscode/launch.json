@@ -1,0 +1,11 @@
+{
+    "configurations": [
+        
+        {
+            "type": "chrome",
+            "name": "mongodb+srv://sosillyy1712:RIQr2e3VB0ZtdFKM@textbookdb.8l6q5sj.mongodb.net/?retryWrites=true&w=majority&appName=textbookDB",
+            "request": "launch",
+            "url": "mongodb+srv://sosillyy1712:RIQr2e3VB0ZtdFKM@textbookdb.8l6q5sj.mongodb.net/?retryWrites=true&w=majority&appName=textbookDB"
+        }
+    ]
+}

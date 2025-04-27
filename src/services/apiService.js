@@ -57,7 +57,7 @@
 import axios from "axios";
 
 // Define the API base URL - make sure this matches your server address
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = " ";
 
 export const getTextbooks = async (syllabusScheme, college, department, semester, subject) => {
   try {
@@ -104,7 +104,9 @@ export const uploadTextbook = async (file, syllabusScheme, college, department, 
     const response = await axios.post(`${API_BASE_URL}/api/textbooks/upload`, formData, {
       headers: {
         // Don't set Content-Type manually, let axios set it with boundary
-        'Accept': 'application/json',
+        // 'Accept': 'application/json',
+        method: "POST",
+        body: formData,
       },
       // Needed for cross-origin requests with credentials
       withCredentials: true
