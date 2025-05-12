@@ -1,16 +1,23 @@
-const jwt = require("jsonwebtoken");
 
-const authMiddleware = (req, res, next) => {
-  const token = req.header("Authorization");
-  if (!token) return res.status(401).json({ message: "Access Denied" });
+
+const jwt = require("jsonwebtoken");
+const User = require("../models/userModel");
+const dotenv = require("dotenv");
+require("dotenv").config();
+
+const protect = async (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ message: "Not authorized, no token" });
+  }
 
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id).select("-password");
     next();
   } catch (error) {
-    res.status(400).json({ message: "Invalid Token" });
+    res.status(401).json({ message: "Not authorized, token failed" });
   }
 };
 
-module.exports = authMiddleware;
+module.exports = { protect };
